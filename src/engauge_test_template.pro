@@ -28,6 +28,7 @@ MOC_DIR = .moc_test
 RCC_DIR = .rcc_test
 
 HEADERS  += \
+    AxesScan/AxesScan.h \
     Background/BackgroundImage.h \
     Background/BackgroundStateAbstractBase.h \
     Background/BackgroundStateContext.h \
@@ -364,6 +365,7 @@ HEADERS  += \
     util/ZValues.h
 
 SOURCES += \
+    AxesScan/AxesScan.cpp \
     Background/BackgroundImage.cpp \
     Background/BackgroundStateAbstractBase.cpp \
     Background/BackgroundStateContext.cpp \
@@ -685,7 +687,8 @@ CONFIG += windows
 }
 
 LIBS += -llog4cpp -lfftw3
-INCLUDEPATH += Background \
+INCLUDEPATH += AxesScan \
+               Background \
                Callback \
                Checker \
                Checklist \

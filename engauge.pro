@@ -61,6 +61,8 @@ MOC_DIR = src/.moc
 RCC_DIR = src/.rcc
 
 HEADERS  += \
+    src/AxesScan/AxesResult.h \
+    src/AxesScan/AxesScan.h \
     src/Background/BackgroundImage.h \
     src/Background/BackgroundStateAbstractBase.h \
     src/Background/BackgroundStateContext.h \
@@ -392,6 +394,8 @@ HEADERS  += \
     src/util/ZValues.h
 
 SOURCES += \
+    src/AxesScan/AxesResult.cpp \
+    src/AxesScan/AxesScan.cpp \
     src/Background/BackgroundImage.cpp \
     src/Background/BackgroundStateAbstractBase.cpp \
     src/Background/BackgroundStateContext.cpp \
@@ -754,6 +758,7 @@ win32-msvc* {
 }
 
 INCLUDEPATH += src \
+               src/AxesScan \
                src/Background \
                src/Callback \
                src/Checker \
