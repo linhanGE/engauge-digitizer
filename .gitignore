@@ -5,6 +5,7 @@ object_script.*
 digit-exe-windows-*
 engauge
 engauge.log
+engauge_test.log
 engauge.pro.user
 engauge.pro.user.markummitchell
 Makefile*

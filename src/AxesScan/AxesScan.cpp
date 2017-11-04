@@ -5,7 +5,8 @@
  ******************************************************************************************************/
 
 #include "AxesScan.h"
-#include "fftw3.h"
+#include "Correlation2d.h"
+#include "EngaugeAssert.h"
 #include <iostream>
 #include "Logger.h"
 #include <QFile>
@@ -19,6 +20,62 @@ AxesScan::AxesScan (const QImage &image) :
   m_image (image.convertToFormat (QImage::Format_Mono))
 {
   LOG4CPP_DEBUG_S ((*mainCat)) << "AxesScan::AxesScan";
+
+  ENGAUGE_ASSERT (image.width () == image.height ());
+}
+
+void AxesScan::offsets (const QImage &imageReference,
+                        int &xOffset,
+                        int &yOffset) const
+{
+  ENGAUGE_ASSERT (imageReference.width () == imageReference.height ());
+
+  // Correlation is on m_image and not imageReference so that is the matrix the correlation will be done on
+  const int N = m_image.width ();
+
+  Correlation2d correlation (N);
+
+  // Allocate arrays
+  double *function1 = new double [N * N];
+  double *function2 = new double [N * N];
+  double *correlations = new double [N * N];
+
+  // Initialize arrays
+  int i, j;
+  for (i = 0; i < m_image.width (); i++) {
+    for (j = 0; j < m_image.height (); j++) {
+      if (qGray (m_image.pixel (i, j)) < GRAY_THRESHOLD) {
+        function1 [Correlation2d::fold2dIndexes (N, i, j)] = 1;
+      } else {
+        function1 [Correlation2d::fold2dIndexes (N, i, j)] = 0;
+      }
+    }
+  }
+
+  for (i = 0; i < m_image.width (); i++) {
+    for (j = 0; j < m_image.height (); j++) {
+      if (qGray (imageReference.pixel (i, j)) < GRAY_THRESHOLD) {
+        function2 [Correlation2d::fold2dIndexes (N, i, j)] = 1;
+      } else {
+        function2 [Correlation2d::fold2dIndexes (N, i, j)] = 0;
+      }
+    }
+  }
+
+  // Compute best matching offsets
+  double corrMax;
+  correlation.correlateWithShift (N,
+                                  function1,
+                                  function2,
+                                  xOffset,
+                                  yOffset,
+                                  corrMax,
+                                  correlations);
+
+  // Free arrays
+  free (function1);
+  free (function2);
+  free (correlations);
 }
 
 double AxesScan::shearX () const

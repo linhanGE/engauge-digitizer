@@ -35,12 +35,13 @@ public:
                               const double function2 [],
                               double &corrMax) const;
 
+  /// Convenience function that collapses two dimensional indexes into one dimension
+  static int fold2dIndexes (int N,
+                            int i,
+                            int j);
+
 private:
   Correlation2d();
-
-  int fold2dIndexes (int N,
-                     int i,
-                     int j) const;
   
   int m_N;
 

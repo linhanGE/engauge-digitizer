@@ -165,7 +165,7 @@ void Correlation2d::correlateWithoutShift (int N,
 
 int Correlation2d::fold2dIndexes (int N,
                                   int i,
-                                  int j) const
+                                  int j)
 {
   // Indexes in C are row-major
   return N * j + i;

@@ -17,8 +17,7 @@ signals:
 private slots:
   void cleanupTestCase ();
   void initTestCase ();
-
-  void testOffset ();
+  void testOffset0_0 ();
   void testShearMinus1 ();
   void testShearMinus2 ();
   void testShearMinus3 ();
@@ -38,6 +37,8 @@ private:
                         const QImage &image,
                         double kX,
                         double kY) const;
+  void testOffset (int xOffset,
+                   int yOffset) const;
   void testShear (double angleDegrees) const;
 };
 

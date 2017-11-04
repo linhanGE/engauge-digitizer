@@ -21,6 +21,8 @@ const int MARGIN_AXES = 120;
 const int MARGIN_MAIN_LABELS = 76;
 const int NUMTICS = 8;
 const int TICKWIDTH = 3;
+const int ZERO_ANGLE = 0;
+const int ZERO_OFFSET = 0;
 
 TestAxesScan::TestAxesScan(QObject *parent) :
   QObject(parent)
@@ -223,14 +225,27 @@ void TestAxesScan::saveResultsFile (const QString & /* filename */,
 #endif
 }
 
-void TestAxesScan::testOffset ()
+void TestAxesScan::testOffset (int xOffsetExpected,
+                               int yOffsetExpected) const
 {
-  QVERIFY ((true));
+  QImage image = generateSample (ZERO_ANGLE, xOffsetExpected, yOffsetExpected);
+  QImage imageReference = generateSample (ZERO_ANGLE, ZERO_OFFSET, ZERO_OFFSET);
+  AxesScan axesScan (image);
+
+  int xOffsetGot, yOffsetGot;
+  axesScan.offsets (imageReference, xOffsetGot, yOffsetGot);
+
+  QVERIFY ((xOffsetExpected == xOffsetGot && yOffsetExpected == yOffsetGot));
+}
+
+void TestAxesScan::testOffset0_0 ()
+{
+  testOffset (0, 0);
 }
 
 void TestAxesScan::testShear (double angleDegrees) const
 {
-  QImage image = generateSample (angleDegrees, 0, 0);
+  QImage image = generateSample (angleDegrees, ZERO_OFFSET, ZERO_OFFSET);
 
   AxesScan axesScan (image);
 

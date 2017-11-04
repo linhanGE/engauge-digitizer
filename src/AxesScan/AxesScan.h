@@ -30,6 +30,11 @@ class AxesScan {
   /// Single constructor
   AxesScan (const QImage &image);
 
+  /// Compute the x and y offsets that best match the image. A correlation with the specified image is performed
+  void offsets (const QImage &imageReference,
+                int &xOffset,
+                int &yOffset) const;
+
   /// Compute kx to make the image as vertical as possible. Transformation matrix is:
   /// (1 kx)
   /// (0  1)
