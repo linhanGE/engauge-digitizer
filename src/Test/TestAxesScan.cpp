@@ -31,7 +31,9 @@ void TestAxesScan::cleanupTestCase ()
 {
 }
 
-QImage TestAxesScan::generateSample (int angleDegrees) const
+QImage TestAxesScan::generateSample (double angleDegrees,
+                                     int xOffset,
+                                     int yOffset) const
 {
   // We generate a test image rather than relying on an external image file that may or may not exist
   // and be where we expect it to be
@@ -44,37 +46,53 @@ QImage TestAxesScan::generateSample (int angleDegrees) const
   painter.setPen (QPen (Qt::black));
 
   // X axis
-  QLineF lineX (MARGIN_AXES, invert (MARGIN_AXES), L - MARGIN_AXES, invert (MARGIN_AXES));
+  QLineF lineX (xOffset + MARGIN_AXES,
+                yOffset + invert (MARGIN_AXES),
+                xOffset + L - MARGIN_AXES,
+                yOffset + invert (MARGIN_AXES));
   painter.drawLine (lineX);
   QPolygonF arrowX;
-  arrowX << QPointF (L - MARGIN_AXES + ARROWDELTA, invert (MARGIN_AXES));
-  arrowX << QPointF (L - MARGIN_AXES, invert (MARGIN_AXES + ARROWDELTA));
-  arrowX << QPointF (L - MARGIN_AXES, invert (MARGIN_AXES - ARROWDELTA));
+  arrowX << QPointF (xOffset + L - MARGIN_AXES + ARROWDELTA, invert (yOffset + MARGIN_AXES));
+  arrowX << QPointF (xOffset + L - MARGIN_AXES,              invert (yOffset + MARGIN_AXES + ARROWDELTA));
+  arrowX << QPointF (xOffset + L - MARGIN_AXES,              invert (yOffset + MARGIN_AXES - ARROWDELTA));
   painter.drawPolygon (arrowX);
 
   // X tics and labels
   for (i = 0; i < NUMTICS; i++) {
     int x = MARGIN_AXES + (L - 2 * MARGIN_AXES) * (double) i / (double) NUMTICS;
-    QLineF lineX (x, invert (MARGIN_AXES - TICKWIDTH), x, invert (MARGIN_AXES + TICKWIDTH));
+    QLineF lineX (xOffset + x,
+                  invert (yOffset + MARGIN_AXES - TICKWIDTH),
+                  xOffset + x,
+                  invert (yOffset + MARGIN_AXES + TICKWIDTH));
     painter.drawLine (lineX); // Tics
-    painter.drawText (x - 8, invert (MARGIN_AXES - 2 * TICKWIDTH - 15), QString::number (x)); // Labels
+    painter.drawText (xOffset + x - 8,
+                      invert (yOffset + MARGIN_AXES - 2 * TICKWIDTH - 15),
+                      QString::number (x)); // Labels
   }
   
   // Y axis
-  QLineF lineY (MARGIN_AXES, invert (MARGIN_AXES), MARGIN_AXES, invert (L - MARGIN_AXES));
+  QLineF lineY (xOffset + MARGIN_AXES,
+                invert (yOffset + MARGIN_AXES),
+                xOffset + MARGIN_AXES,
+                invert (yOffset + L - MARGIN_AXES));
   painter.drawLine (lineY);
   QPolygonF arrowY;
-  arrowY << QPointF (MARGIN_AXES, invert (L - MARGIN_AXES + ARROWDELTA));
-  arrowY << QPointF (MARGIN_AXES - ARROWDELTA, invert (L - MARGIN_AXES));
-  arrowY << QPointF (MARGIN_AXES + ARROWDELTA, invert (L - MARGIN_AXES));
+  arrowY << QPointF (xOffset + MARGIN_AXES,              invert (yOffset + L - MARGIN_AXES + ARROWDELTA));
+  arrowY << QPointF (xOffset + MARGIN_AXES - ARROWDELTA, invert (yOffset + L - MARGIN_AXES));
+  arrowY << QPointF (xOffset + MARGIN_AXES + ARROWDELTA, invert (yOffset + L - MARGIN_AXES));
   painter.drawPolygon (arrowY);
   
   // Y tics and labels
   for (i = 0; i < NUMTICS; i++) {
     int y = MARGIN_AXES + (L - 2 * MARGIN_AXES) * (double) i / (double) NUMTICS;
-    QLineF lineY (MARGIN_AXES - TICKWIDTH, invert (y), MARGIN_AXES + TICKWIDTH, invert (y));
+    QLineF lineY (xOffset + MARGIN_AXES - TICKWIDTH,
+                  invert (yOffset + y),
+                  xOffset + MARGIN_AXES + TICKWIDTH,
+                  invert (yOffset + y));
     painter.drawLine (lineY); // Tics
-    painter.drawText (MARGIN_AXES - 2 * TICKWIDTH - 30, invert (y - 4), QString::number (y)); // Labels
+    painter.drawText (xOffset + MARGIN_AXES - 2 * TICKWIDTH - 30,
+                      invert (yOffset + y - 4),
+                      QString::number (y)); // Labels
   }
 
   // Graphs
@@ -91,7 +109,10 @@ QImage TestAxesScan::generateSample (int angleDegrees) const
     for (int x = MARGIN_AXES; x < L - MARGIN_AXES; x++) {
       int y = g * 40 + MARGIN_AXES + 40 + (x - MARGIN_AXES) / 2.0 + 20 * qSin (x / 30.0);
       if (x > MARGIN_AXES) {
-        QLineF lineG (xLast, invert (yLast), x, invert (y));
+        QLineF lineG (xOffset + xLast,
+                      invert (yOffset + yLast),
+                      xOffset + x,
+                      invert (yOffset + y));
         painter.drawLine (lineG);
       }
       xLast = x;
@@ -103,16 +124,20 @@ QImage TestAxesScan::generateSample (int angleDegrees) const
   painter.setFont (QFont ("Arial", 20));
   
   // Title
-  painter.drawText (L / 2 - 60, invert (L - MARGIN_MAIN_LABELS), QString ("Sample Plot"));
+  painter.drawText (xOffset + L / 2 - 60,
+                    invert (yOffset + L - MARGIN_MAIN_LABELS),
+                    QString ("Sample Plot"));
 
   // X legend
-  painter.drawText (L / 2 - 2, invert (MARGIN_MAIN_LABELS), QString ("Time"));
+  painter.drawText (xOffset + L / 2 - 2,
+                    invert (yOffset + MARGIN_MAIN_LABELS),
+                    QString ("Time"));
 
   // Y legend
   int R = L / 2;
   painter.rotate (-90); // Makes text vertical along +x axis
   painter.translate (-R, -R + MARGIN_MAIN_LABELS);
-  painter.drawText (0, invert (R), QString ("Y Axis"));
+  painter.drawText (xOffset + 0, invert (R), QString ("Y Axis"));
 
   QTransform trans;
   QTransform rotateTransform = trans.rotate (-1.0 * angleDegrees);
@@ -124,10 +149,10 @@ QImage TestAxesScan::generateSample (int angleDegrees) const
   QImage imageCornersAreBlack = rotated.toImage ();
 
   // Need to remove black corners
-  return imageCornersAreBlack.copy (QRect (QPoint ((L - LOUT) / 2,
-                                                   invert ((L + LOUT) / 2)),
-                                           QPoint ((L + LOUT) / 2,
-                                                   invert ((L - LOUT) / 2))));
+  return imageCornersAreBlack.copy (QRect (QPoint (xOffset + (L - LOUT) / 2,
+                                                   invert (yOffset + (L + LOUT) / 2)),
+                                           QPoint (xOffset + (L + LOUT) / 2,
+                                                   invert (yOffset + (L - LOUT) / 2))));
 }
 
 void TestAxesScan::initTestCase ()
@@ -158,48 +183,116 @@ int TestAxesScan::invert (int y) const
   return L - y;
 }
 
-void TestAxesScan::testShear ()
+#ifdef SAVE_RESULTS
+void TestAxesScan::saveResultsFile (const QString &filename,
+#else
+void TestAxesScan::saveResultsFile (const QString & /* filename */,
+#endif
+                                    const QImage &image,
+                                    double kX,
+                                    double kY) const
 {
-  for (int angleDegrees = -4; angleDegrees <= +4; angleDegrees += 1) {
+  QImage imageFixed (image.size (), QImage::Format_RGB32);
 
-    QImage image = generateSample (angleDegrees);
- 
-    AxesScan axesScan (image);
+  imageFixed.fill (QColor (Qt::white).rgb ());
 
-    double kX = axesScan.shearX ();
-    double kY = axesScan.shearY ();
+  for (int rowFrom = 0; rowFrom < image.height (); rowFrom++) {
+    for (int colFrom = 0; colFrom < image.width (); colFrom++) {
 
-    cerr << " kX=" << kX << " kY=" << kY << endl;
-    
-    QImage imageFixed (image.size (), QImage::Format_RGB32);
+      // (rowTo) = (1  ky) (rowFrom)
+      // (colTo)   (kx  1) (colFrom)
 
-    imageFixed.fill (QColor (Qt::white).rgb ());
+      int rowTo = rowFrom - kY * colFrom;
+      int colTo = - kX * rowFrom + colFrom;
 
-    for (int rowFrom = 0; rowFrom < image.height (); rowFrom++) {
-      for (int colFrom = 0; colFrom < image.width (); colFrom++) {
+      if ((0 <= rowTo) &&
+          (0 <= colTo) &&
+          (rowTo < image.height ()) &&
+          (colTo < image.width ())) {
 
-        // (rowTo) = (1  ky) (rowFrom)
-        // (colTo)   (kx  1) (colFrom)
-        
-        int rowTo = rowFrom - kY * colFrom;
-        int colTo = - kX * rowFrom + colFrom;
-
-        if ((0 <= rowTo) &&
-            (0 <= colTo) &&
-            (rowTo < image.height ()) &&
-            (colTo < image.width ())) {
-
-          imageFixed.setPixel (colTo,
-                               rowTo,
-                               image.pixel (colFrom,
-                                            rowFrom));
-        }
+        imageFixed.setPixel (colTo,
+                             rowTo,
+                             image.pixel (colFrom,
+                                          rowFrom));
       }
     }
-
-    QString filename = QString ("shear_%1.png").arg (angleDegrees);
-    imageFixed.save (filename);
-    
-    QVERIFY ((true));
   }
+
+#ifdef SAVE_RESULTS
+  imageFixed.save (filename);
+#endif
+}
+
+void TestAxesScan::testOffset ()
+{
+  QVERIFY ((true));
+}
+
+void TestAxesScan::testShear (double angleDegrees) const
+{
+  QImage image = generateSample (angleDegrees, 0, 0);
+
+  AxesScan axesScan (image);
+
+  double kXGot = axesScan.shearX ();
+  double kYGot = axesScan.shearY ();
+
+  QString filename = QString ("shear_%1.png").arg (angleDegrees);
+  saveResultsFile (filename,
+                   image,
+                   kXGot,
+                   kYGot);
+
+  // Pattern experimentally determined from data is that best kx=sin(angleDegrees) and ky=sin(angleDegrees)
+  double kXWanted = qSin (qDegreesToRadians (angleDegrees));
+  double kYWanted = -1.0 * kXWanted;
+
+  const double EPSILON = 0.01;
+
+  QVERIFY ((qAbs (kXGot - kXWanted) < EPSILON && qAbs (kYGot - kYWanted) < EPSILON));
+}
+
+void TestAxesScan::testShearMinus1 ()
+{
+  testShear (-1);
+}
+
+void TestAxesScan::testShearMinus2 ()
+{
+  testShear (-2);
+}
+
+void TestAxesScan::testShearMinus3 ()
+{
+  testShear (-3);
+}
+
+void TestAxesScan::testShearMinus4 ()
+{
+  testShear (-4);
+}
+
+void TestAxesScan::testShearPlus1 ()
+{
+  testShear (1);
+}
+
+void TestAxesScan::testShearPlus2 ()
+{
+  testShear (2);
+}
+
+void TestAxesScan::testShearPlus3 ()
+{
+  testShear (3);
+}
+
+void TestAxesScan::testShearPlus4 ()
+{
+  testShear (4);
+}
+
+void TestAxesScan::testShearZero ()
+{
+  testShear (0);
 }
