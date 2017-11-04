@@ -157,6 +157,7 @@ HEADERS  += \
     src/Coord/CoordUnitsPolarTheta.h \
     src/Coord/CoordUnitsTime.h \
     src/Correlation/Correlation.h \
+    src/Correlation/Correlation2d.h \
     src/Cursor/CursorFactory.h \
     src/Cursor/CursorSize.h \
     src/Curve/Curve.h \
@@ -486,6 +487,7 @@ SOURCES += \
     src/Coord/CoordUnitsPolarTheta.cpp \
     src/Coord/CoordUnitsTime.cpp \
     src/Correlation/Correlation.cpp \
+    src/Correlation/Correlation2d.cpp \
     src/Cursor/CursorFactory.cpp \
     src/Cursor/CursorSize.cpp \
     src/Curve/Curve.cpp \

@@ -6,98 +6,73 @@
 
 #include "AxesScan.h"
 #include "fftw3.h"
+#include <iostream>
 #include "Logger.h"
+#include <QFile>
+#include <QPainter>
 
-const int NUMBER_OF_RASTERS_IN_ONE_DIRECTION = 10;
-const int NROW = NUMBER_OF_RASTERS_IN_ONE_DIRECTION; // Less cumbersome name
-const int NCOL = NUMBER_OF_RASTERS_IN_ONE_DIRECTION; // Less cumbersome name
+using namespace std;
+
+const int GRAY_THRESHOLD = 127;
 
 AxesScan::AxesScan (const QImage &image) :
-  m_image (image),
-  m_rastersHorizontal (NCOL),
-  m_rastersVertical (NROW)
+  m_image (image.convertToFormat (QImage::Format_Mono))
 {
   LOG4CPP_DEBUG_S ((*mainCat)) << "AxesScan::AxesScan";
-
-  scanHorizontal ();
-  scanVertical ();
 }
 
-int AxesScan::columnFromIndex (int indexCol) const
+double AxesScan::shearX () const
 {
-  // Indexes should span the width range but not include or touch left or right
-  return (int) ((indexCol + 1.0) * m_image.width () / (NCOL + 1.0));
-}
+  bool isFirst = true;
+  double kxMax = 0; // Shear value that gives maximum black in a column
+  double colSumMax = 0; // Number of black pixels in column
+  
+  for (double kx = -0.1; kx <= 0.1; kx += 0.005) {
 
-int AxesScan::indexFromColumn (int col) const
-{
-  // Expected column values are step, 2*step,... so ranges are
-  // 0.5*step to 1.5*step, 1.5*step to 2.5*step,... for index=0, 1,...
-  double step = m_image.width () / (NCOL + 1.0);
-  return (int) (col / step - 0.5);
-}
-
-int AxesScan::indexFromRow (int row) const
-{
-  // Expected column values are step, 2*step,... so ranges are
-  // 0.5*step, 1.5*step, 1.5*step to 2.5*step,... for index=0, 1,...
-  double step = m_image.height () / (NROW + 1.0);
-  return (int) (row / step - 0.5);
-}
-
-bool AxesScan::matchAxes (double xMin,
-                          double xMax,
-                          double yMin,
-                          double yMax) const
-{
-  // Vertical rasters
-  fftw_complex *rowSignal = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (2 * NCOL - 1));
-  fftw_complex *rowFrequency = (fftw_complex *) fftw_malloc (sizeof (fftw_complex) * (2 * NCOL - 1));
-  fftw_plan rowPlan = fftw_plan_dft_1d (2 * NCOL - 1, rowSignal, rowFrequency, FFTW_FORWARD, FFTW_ESTIMATE);
-  for (int indexCol = 0; indexCol < NCOL - 1; indexCol++) {
-    for (int row = 0; row < NROW; row++) {
-      if (row < NROW - 1) {
-        rowSignal [row] [0] = 0;
+    for (int col = 0; col < m_image.width (); col++) {
+      double colSum = 0;
+      for (int row = 0; row < m_image.height (); row++) {
+        int colSheared = col + kx * row;
+        if (0 <= colSheared && colSheared < m_image.width ()) {
+          colSum += (qGray (m_image.pixel (colSheared, row)) < GRAY_THRESHOLD ? 1 : 0);
+        }
       }
-      rowSignal [row + NROW - 1] [0] = m_rastersHorizontal [indexCol] [row]; // Real part
-      rowSignal [row + NROW - 1] [1] = 0.0; // Imaginary part
+
+      if (isFirst || colSum > colSumMax) {
+        isFirst = false;
+        kxMax = kx;
+        colSumMax = colSum;
+      }
     }
   }
-  fftw_destroy_plan (rowPlan);
-  fftw_free (rowSignal);
-  fftw_free (rowFrequency);
 
-  return true;
+  return kxMax;
 }
 
-int AxesScan::rowFromIndex (int indexRow) const
+double AxesScan::shearY () const
 {
-  // Indexes should span the height range but not include or touch top or bottom
-  return (int) ((indexRow + 1.0) * m_image.height () / (NROW + 1.0));
-}
+  bool isFirst = true;    
+  double kyMax = 0; // Shear value that gives maximum black in a row
+  double rowSumMax = 0; // Number of black pixels in row
+  
+  for (double ky = -0.1; ky <= 0.1; ky += 0.005) {
 
-void AxesScan::scanHorizontal ()
-{
-  // Create a small number of horizontal scans
-  for (int indexRow = 0; indexRow < NROW; indexRow++) {
+    for (int row = 0; row < m_image.height (); row++) {
+      double rowSum = 0;
+      for (int col = 0; col < m_image.width (); col++) {
+        int rowSheared = row + ky * col;
+        if (0 <= rowSheared && rowSheared < m_image.height ()) {
+          rowSum += (qGray (m_image.pixel (col, rowSheared)) < GRAY_THRESHOLD ? 1 : 0);          
+        }
+      }
 
-    int row = rowFromIndex (indexRow);
-
-    for (int col = 0; col < m_image.width(); col++) {
-      m_rastersHorizontal [col] [indexRow] = m_image.pixel (col, row);
+      if (isFirst || rowSum > rowSumMax) {
+        isFirst = false;
+        kyMax = ky;
+        rowSumMax = rowSum;
+      }
     }
   }
-}
 
-void AxesScan::scanVertical ()
-{
-  // Create a small number of vertical scans
-  for (int indexCol = 0; indexCol < NCOL; indexCol++) {
-
-    int col = columnFromIndex (indexCol);
-
-    for (int row = 0; row < m_image.width(); row++) {
-      m_rastersVertical [indexCol] [row] = m_image.pixel (col, row);
-    }
-  }
+  return kyMax;
 }

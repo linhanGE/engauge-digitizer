@@ -123,6 +123,7 @@ HEADERS  += \
     Coord/CoordUnitsPolarTheta.h \
     Coord/CoordUnitsTime.h \
     Correlation/Correlation.h \
+    Correlation/Correlation2d.h \
     Cursor/CursorFactory.h \
     Cursor/CursorSize.h \
     Curve/Curve.h \
@@ -456,6 +457,7 @@ SOURCES += \
     Coord/CoordUnitsPolarTheta.cpp \
     Coord/CoordUnitsTime.cpp \
     Correlation/Correlation.cpp \
+    Correlation/Correlation2d.cpp \
     Cursor/CursorFactory.cpp \
     Cursor/CursorSize.cpp \
     Curve/Curve.cpp \

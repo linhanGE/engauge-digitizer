@@ -1,0 +1,172 @@
+/******************************************************************************************************
+ * (C) 2017 markummitchell@github.com. This file is part of Engauge Digitizer, which is released      *
+ * under GNU General Public License version 2 (GPLv2) or (at your option) any later version. See file *
+ * LICENSE or go to gnu.org/licenses for details. Distribution requires prior written permission.     *
+ ******************************************************************************************************/
+
+#include "Correlation2d.h"
+#include "EngaugeAssert.h"
+#include "fftw3.h"
+#include "Logger.h"
+#include <QDebug>
+#include <qmath.h>
+
+Correlation2d::Correlation2d(int N) :
+  m_N (N),
+  m_signalA ((fftw_complex *) fftw_malloc(sizeof(fftw_complex) * (2 * N - 1) * (2 * N - 1))),
+  m_signalB ((fftw_complex *) fftw_malloc(sizeof(fftw_complex) * (2 * N - 1) * (2 * N - 1))),
+  m_outShifted ((fftw_complex *) fftw_malloc(sizeof(fftw_complex) * (2 * N - 1) * (2 * N - 1))),
+  m_outA ((fftw_complex *) fftw_malloc(sizeof(fftw_complex) * (2 * N - 1) * (2 * N - 1))),
+  m_outB ((fftw_complex *) fftw_malloc(sizeof(fftw_complex) * (2 * N - 1) * (2 * N - 1))),
+  m_out ((fftw_complex *) fftw_malloc(sizeof(fftw_complex) * (2 * N - 1) * (2 * N - 1)))
+{
+  m_planA = fftw_plan_dft_2d(2 * N - 1, 2 * N - 1, m_signalA, m_outA, FFTW_FORWARD, FFTW_ESTIMATE);
+  m_planB = fftw_plan_dft_2d(2 * N - 1, 2 * N - 1, m_signalB, m_outB, FFTW_FORWARD, FFTW_ESTIMATE);
+  m_planX = fftw_plan_dft_2d(2 * N - 1, 2 * N - 1, m_out, m_outShifted, FFTW_BACKWARD, FFTW_ESTIMATE);
+}
+
+Correlation2d::~Correlation2d()
+{
+  fftw_destroy_plan(m_planA);
+  fftw_destroy_plan(m_planB);
+  fftw_destroy_plan(m_planX);
+
+  fftw_free(m_signalA);
+  fftw_free(m_signalB);
+  fftw_free(m_outShifted);
+  fftw_free(m_out);
+  fftw_free(m_outA);
+  fftw_free(m_outB);
+
+  fftw_cleanup();
+}
+
+void Correlation2d::correlateWithShift (int N,
+                                        const double function1 [],
+                                        const double function2 [],
+                                        int &binStartMaxX,
+                                        int &binStartMaxY,                                        
+                                        double &corrMax,
+                                        double correlations []) const
+{
+//  LOG4CPP_DEBUG_S ((*mainCat)) << "Correlation2d::correlateWithShift";
+
+  int i, j;
+
+  ENGAUGE_ASSERT (N == m_N);
+
+  // Normalize input functions so that:
+  // 1) mean is zero. This is used to compute an additive normalization constant
+  // 2) max value is 1. This is used to compute a multiplicative normalization constant
+  double sumMean1 = 0, sumMean2 = 0, max1 = 0, max2 = 0;
+  for (i = 0; i < N; i++) {
+    for (j = 0; j < N; j++) {    
+
+      sumMean1 += function1 [fold2dIndexes (N, i, j)];
+      sumMean2 += function2 [fold2dIndexes (N, i, j)];
+      max1 = qMax (max1, function1 [fold2dIndexes (N, i, j)]);
+      max2 = qMax (max2, function2 [fold2dIndexes (N, i, j)]);
+
+    }
+  }
+
+  double additiveNormalization1 = sumMean1 / N;
+  double additiveNormalization2 = sumMean2 / N;
+  double multiplicativeNormalization1 = 1.0 / max1;
+  double multiplicativeNormalization2 = 1.0 / max2;
+
+  // Load length N functions into length 2N+1 arrays, padding with zeros before for the first
+  // array, and with zeros after for the second array
+  for (i = 0; i < N - 1; i++) {
+    for (j = 0; j < N - 1; j++) {    
+
+      m_signalA [fold2dIndexes (N, i, j)] [0] = 0.0;
+      m_signalA [fold2dIndexes (N, i, j)] [1] = 0.0;
+      m_signalB [fold2dIndexes (N, i + N, j + N)] [0] = 0.0;
+      m_signalB [fold2dIndexes (N, i + N, j + N)] [1] = 0.0;
+
+    }
+  }
+  for (i = 0; i < N; i++) {
+    for (j = 0; j < N - 1; j++) {    
+
+      m_signalA [fold2dIndexes (N, i + N - 1, j + N - 1)] [0] =
+        (function1 [fold2dIndexes (N, i, j)] - additiveNormalization1) * multiplicativeNormalization1;
+      m_signalA [fold2dIndexes (N, i + N - 1, j + N - 1)] [1] = 0.0;
+      m_signalB [fold2dIndexes (N, i, j)] [0] =
+        (function2 [fold2dIndexes (N, i, j)] - additiveNormalization2) * multiplicativeNormalization2;
+      m_signalB [fold2dIndexes (N, i, j)] [1] = 0.0;
+
+    }
+  }
+
+  fftw_execute(m_planA);
+  fftw_execute(m_planB);
+
+  // Correlation2d in frequency space
+  fftw_complex scale = {1.0/(2.0 * N - 1.0), 0.0};
+  for (i = 0; i < 2 * N - 1; i++) {
+    for (j = 0; j < 2 * N - 1; j++) {    
+      // Multiply m_outA [fold2dIndexes (N, i, j)] * conj (m_outB) * scale
+      fftw_complex term1 = {m_outA [fold2dIndexes (N, i, j)] [0], m_outA [fold2dIndexes (N, i, j)] [1]};
+      fftw_complex term2 = {m_outB [fold2dIndexes (N, i, j)] [0], m_outB [fold2dIndexes (N, i, j)] [1] * -1.0};
+      fftw_complex term3 = {scale [0], scale [1]};
+      fftw_complex terms12 = {term1 [0] * term2 [0] - term1 [1] * term2 [1],
+                              term1 [0] * term2 [1] + term1 [1] * term2 [0]};
+      m_out [fold2dIndexes (N, i, j)] [0] = terms12 [0] * term3 [0] - terms12 [1] * term3 [1];
+      m_out [fold2dIndexes (N, i, j)] [1] = terms12 [0] * term3 [1] + terms12 [1] * term3 [0];
+    }
+  }
+
+  fftw_execute(m_planX);
+
+  // Search for highest correlation. We have to account for the shift in the index. Specifically,
+  // 0 to N was mapped to the second half of the array that is 0 to 2 * N - 1
+  corrMax = 0.0;
+  bool isFirst = true;
+  for (int i0AtLeft = 0; i0AtLeft < N; i0AtLeft++) {
+    int i0AtCenter = (i0AtLeft + N) % (2 * N - 1);
+
+    for (int j0AtLeft = 0; j0AtLeft < N; j0AtLeft++) {
+      int j0AtCenter = (j0AtLeft + N) % (2 * N - 1);
+      
+      fftw_complex shifted = {m_outShifted [fold2dIndexes (N, i0AtCenter, j0AtCenter)] [0],
+                              m_outShifted [fold2dIndexes (N, i0AtCenter, j0AtCenter)] [1]};
+      double corr = qSqrt (shifted [0] * shifted [0] + shifted [1] * shifted [1]);
+      
+      if (isFirst || (corr > corrMax)) {
+        isFirst = false;
+        binStartMaxX = i0AtLeft;
+        binStartMaxY = j0AtLeft;      
+        corrMax = corr;
+      }
+
+      // Save for, if enabled, external logging
+      correlations [fold2dIndexes (N, i0AtCenter, j0AtCenter)] = corr;
+    }      
+  }
+}
+
+void Correlation2d::correlateWithoutShift (int N,
+                                           const double function1 [],
+                                           const double function2 [],
+                                           double &corrMax) const
+{
+//  LOG4CPP_DEBUG_S ((*mainCat)) << "Correlation2d::correlateWithoutShift";
+
+  corrMax = 0.0;
+
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < N; j++) {    
+      corrMax += function1 [fold2dIndexes (N, i, j)] * function2 [fold2dIndexes (N, i, j)];
+    }
+  }
+}
+
+int Correlation2d::fold2dIndexes (int N,
+                                  int i,
+                                  int j) const
+{
+  // Indexes in C are row-major
+  return N * j + i;
+}

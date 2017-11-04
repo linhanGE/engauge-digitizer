@@ -11,12 +11,6 @@
 #include <QRgb>
 #include <QVector>
 
-// One raster line scan
-typedef QVector<QRgb> Raster;
-
-// One set of horizontal or vertical raster lines
-typedef QVector<Raster> Rasters;
-
 /// Given an image, this class identifies the most probably axes.
 ///
 /// Strategy:
@@ -36,12 +30,16 @@ class AxesScan {
   /// Single constructor
   AxesScan (const QImage &image);
 
-  /// Try to create points using the axes matching algorithm
-  bool matchAxes (double xMin,
-                  double xMax,
-                  double yMin,
-                  double yMax) const;
+  /// Compute kx to make the image as vertical as possible. Transformation matrix is:
+  /// (1 kx)
+  /// (0  1)
+  double shearX () const;
 
+  /// Compute ky to make the image as horizontal as possible. Transformation matrix is:
+  /// (1  0)
+  /// (ky 1)
+  double shearY () const;  
+  
  private:
   AxesScan ();
 
@@ -49,14 +47,9 @@ class AxesScan {
   int indexFromColumn (int col) const;
   int indexFromRow (int Row) const;
   int rowFromIndex (int index) const;
-  void scanHorizontal ();
-  void scanVertical ();
 
   // Local copy of image with direct pixel access
   const QImage m_image;
-
-  Rasters m_rastersHorizontal;
-  Rasters m_rastersVertical;
 };
 
 #endif // AXES_SCAN_H
